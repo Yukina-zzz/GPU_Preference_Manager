@@ -13,8 +13,7 @@ GPU Preference Manager 是面向 Windows 11 混合显卡环境的 WPF 桌面工�
 
 ## 主要能力
 
-- 通过 DXGI 枚举适配器、LUID 和真实专用显存，不使用不可靠的 WMI `AdapterRAM`；
-- 保留未知 token 的注册表规则 parser/serializer；
+- 通过 DXGI 枚举适配器、LUID 和真实专用显存；
 - 按应用进程树归组多种 EXE、多个进程、多物理分区和多 GPU 的 PDH 数据；
 - 待处理、已指定、全部占用、忽略、异常、历史、适配器和设置视图；
 - 批量设置特定适配器、通用节能、通用高性能或清除偏好；
