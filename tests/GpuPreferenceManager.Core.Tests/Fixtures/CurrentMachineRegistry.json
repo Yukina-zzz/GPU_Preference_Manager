@@ -1,0 +1,116 @@
+[
+  {
+    "name": "C:\\Program Files\\Java\\jre1.8.0_271\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "S:\\minecraft\\Plain Craft Launcher 2.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "C:\\Program Files\\Java\\jre1.8.0_461\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "S:\\minecraft\\java\\java-runtime-gamma\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "S:\\minecraft\\MCA Selector\\jre\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "C:\\Program Files\\Java\\jdk-17\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "C:\\Program Files\\Java\\jdk-21\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "X:\\SteamLibrary\\steamapps\\common\\wallpaper_engine\\bin\\wallpaperui.exe",
+    "value": "SpecificAdapter=1002&164E&164E1002;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&164E&164E1002"
+  },
+  {
+    "name": "%USERPROFILE%\\AppData\\Roaming\\PrismLauncher\\java\\eclipse_temurin_jre21.0.8+9\\bin\\java.exe",
+    "value": "GpuPreference=2;",
+    "expectedKind": "GenericHighPerformance",
+    "expectedAdapterKey": null
+  },
+  {
+    "name": "S:\\SteamLibrary\\steamapps\\common\\Helldivers 2\\bin\\helldivers2.exe",
+    "value": "SpecificAdapter=1002&73EF&1EFE;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&73EF&1EFE"
+  },
+  {
+    "name": "DirectXUserGlobalSettings",
+    "value": "HighPerfAdapter=1002&73EF&1EFE;",
+    "expectedKind": "GlobalSettings",
+    "expectedAdapterKey": "1002&73EF&1EFE"
+  },
+  {
+    "name": "X:\\Hypergryph Launcher\\games\\Arknights Endfield\\Endfield.exe",
+    "value": "SpecificAdapter=1002&73EF&1EFE;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&73EF&1EFE"
+  },
+  {
+    "name": "X:\\SteamLibrary\\steamapps\\common\\wallpaper_engine\\wallpaper64.exe",
+    "value": "SpecificAdapter=1002&73EF&1EFE;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&73EF&1EFE"
+  },
+  {
+    "name": "C:\\Windows\\System32\\dwm.exe",
+    "value": "SpecificAdapter=1002&164E&164E1002;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&164E&164E1002"
+  },
+  {
+    "name": "S:\\Skyrim\\iniRePather-Skyrim\\ModOrganizer.exe",
+    "value": "SpecificAdapter=1002&164E&164E1002;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&164E&164E1002"
+  },
+  {
+    "name": "S:\\Skyrim\\iniRePather-Skyrim\\StockGame\\SkyrimSE.exe",
+    "value": "SpecificAdapter=1002&73EF&1EFE;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&73EF&1EFE"
+  },
+  {
+    "name": "C:\\Program Files\\WindowsApps\\Microsoft.ScreenSketch_11.2602.49.0_x64__8wekyb3d8bbwe\\SnippingTool\\SnippingTool.exe",
+    "value": "SpecificAdapter=1002&164E&164E1002;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&164E&164E1002"
+  },
+  {
+    "name": "%USERPROFILE%\\AppData\\Local\\PowerToys\\WinUI3Apps\\PowerToys.QuickAccess.exe",
+    "value": "SpecificAdapter=1002&164E&164E1002;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&164E&164E1002"
+  },
+  {
+    "name": "%USERPROFILE%\\AppData\\Local\\PowerToys\\WinUI3Apps\\PowerToys.PowerDisplay.exe",
+    "value": "SpecificAdapter=1002&164E&164E1002;GpuPreference=1073741824;",
+    "expectedKind": "SpecificAdapter",
+    "expectedAdapterKey": "1002&164E&164E1002"
+  }
+]

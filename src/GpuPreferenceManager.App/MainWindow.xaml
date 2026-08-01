@@ -1,0 +1,622 @@
+<Window x:Class="GpuPreferenceManager.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GPU 偏好管理器"
+        Width="1440" Height="840" MinWidth="1200" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#F7F8FA"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <SolidColorBrush x:Key="DividerBrush" Color="#E2E5E9" />
+    <SolidColorBrush x:Key="SubtleTextBrush" Color="#5D6470" />
+
+    <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
+      <Setter Property="Height" Value="44" />
+      <Setter Property="Margin" Value="8,2" />
+      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Root" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="5" Padding="{TemplateBinding Padding}">
+              <ContentPresenter VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Root" Property="Background" Value="#E9EDF2" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Root" Property="Background" Value="#E3E8EF" />
+                <Setter TargetName="Root" Property="BorderBrush" Value="#C59A00" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="PageTitleStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="26" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#191C20" />
+    </Style>
+
+    <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource SubtleTextBrush}" />
+      <Setter Property="Margin" Value="0,12,0,3" />
+    </Style>
+
+    <Style x:Key="CommandButtonStyle" TargetType="Button">
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="12,4" />
+      <Setter Property="Margin" Value="0,0,6,0" />
+      <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+    </Style>
+
+    <Style x:Key="DataGridCellStyle" TargetType="DataGridCell">
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,1,0" />
+      <Setter Property="Padding" Value="8,0" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background" Value="Transparent" />
+          <Setter Property="Foreground" Value="#111418" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="DataGridRowStyle" TargetType="DataGridRow">
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="DetailsVisibility" Value="Collapsed" />
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="#F4F6F8" />
+        </Trigger>
+        <DataTrigger Binding="{Binding IsDetailSelected}" Value="True">
+          <Setter Property="Background" Value="#EAF2FA" />
+          <Setter Property="Foreground" Value="#111418" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding AreProcessesExpanded}" Value="True">
+          <Setter Property="DetailsVisibility" Value="Visible" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <DataTemplate x:Key="ApplicationListTemplate">
+      <Grid Background="White">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" MinWidth="420" />
+          <ColumnDefinition Width="5" />
+          <ColumnDefinition Width="300" />
+        </Grid.ColumnDefinitions>
+
+        <DataGrid ItemsSource="{Binding}"
+                  SelectedItem="{Binding DataContext.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Mode=TwoWay}"
+                  AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Single" SelectionUnit="FullRow"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                  VirtualizingPanel.IsVirtualizing="True"
+                  VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                  VirtualizingPanel.VirtualizationMode="Recycling"
+                  CanUserAddRows="False" CanUserDeleteRows="False"
+                  CanUserResizeRows="False" CanUserResizeColumns="False"
+                  CanUserSortColumns="True" HeadersVisibility="Column"
+                  RowDetailsVisibilityMode="Collapsed"
+                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                  GridLinesVisibility="None"
+                  RowStyle="{StaticResource DataGridRowStyle}"
+                  CellStyle="{StaticResource DataGridCellStyle}"
+                  LoadingRow="OnApplicationGridLoadingRow"
+                  SizeChanged="OnApplicationGridSizeChanged"
+                  BorderThickness="0">
+          <DataGrid.GroupStyle>
+            <GroupStyle>
+              <GroupStyle.ContainerStyle>
+                <Style TargetType="GroupItem">
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="GroupItem">
+                        <Expander IsExpanded="True" HorizontalContentAlignment="Stretch"
+                                  Background="White" BorderThickness="0">
+                          <Expander.Header>
+                            <Border Background="#F1F4F7" BorderBrush="#D6DCE3"
+                                    BorderThickness="0,1,0,1" Padding="10,8">
+                              <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#24282E" />
+                                <TextBlock Text="{Binding ItemCount, StringFormat=（{0}）}"
+                                           Margin="4,0,0,0" Foreground="{StaticResource SubtleTextBrush}" />
+                              </StackPanel>
+                            </Border>
+                          </Expander.Header>
+                          <ItemsPresenter />
+                        </Expander>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </GroupStyle.ContainerStyle>
+            </GroupStyle>
+          </DataGrid.GroupStyle>
+          <DataGrid.RowDetailsTemplate>
+            <DataTemplate>
+              <Border Background="#F5F8FB" Padding="54,7,10,10">
+                <Border Background="White" BorderBrush="#C9D1DA" BorderThickness="1"
+                        CornerRadius="5" ClipToBounds="True">
+                  <StackPanel>
+                  <Border Background="#EDF2F7" BorderBrush="#C9D1DA" BorderThickness="0,0,0,1">
+                  <Grid MinHeight="31">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="1.1*" />
+                      <ColumnDefinition Width="130" />
+                      <ColumnDefinition Width="70" />
+                      <ColumnDefinition Width="1.25*" />
+                      <ColumnDefinition Width="115" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="进程" Margin="10,0" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" BorderBrush="#D7DDE4" BorderThickness="1,0,0,0"><TextBlock Text="可执行文件" Margin="8,0" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" /></Border>
+                    <Border Grid.Column="2" BorderBrush="#D7DDE4" BorderThickness="1,0,0,0"><TextBlock Text="PID" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleTextBrush}" TextAlignment="Center" VerticalAlignment="Center" /></Border>
+                    <Border Grid.Column="3" BorderBrush="#D7DDE4" BorderThickness="1,0,0,0"><TextBlock Text="实际使用 GPU" Margin="8,0" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleTextBrush}" VerticalAlignment="Center" /></Border>
+                    <Border Grid.Column="4" BorderBrush="#D7DDE4" BorderThickness="1,0,0,0"><TextBlock Text="专用显存" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SubtleTextBrush}" TextAlignment="Center" VerticalAlignment="Center" /></Border>
+                  </Grid>
+                  </Border>
+                  <ItemsControl ItemsSource="{Binding Processes}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border BorderBrush="#E3E7EC" BorderThickness="0,0,0,1" Background="#FCFDFE">
+                        <Grid MinHeight="38">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.1*" />
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="70" />
+                            <ColumnDefinition Width="1.25*" />
+                            <ColumnDefinition Width="115" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Text="{Binding DisplayName}" Margin="10,5" TextWrapping="Wrap" VerticalAlignment="Center" />
+                          <Border Grid.Column="1" BorderBrush="#E3E7EC" BorderThickness="1,0,0,0"><TextBlock Text="{Binding ProcessName}" Margin="8,5" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding ExecutablePath}" /></Border>
+                          <Border Grid.Column="2" BorderBrush="#E3E7EC" BorderThickness="1,0,0,0"><TextBlock Text="{Binding ProcessId}" TextAlignment="Center" VerticalAlignment="Center" /></Border>
+                          <Border Grid.Column="3" BorderBrush="#E3E7EC" BorderThickness="1,0,0,0"><TextBlock Text="{Binding ActualGpu}" Margin="8,5" TextWrapping="Wrap" VerticalAlignment="Center" /></Border>
+                          <Border Grid.Column="4" BorderBrush="#E3E7EC" BorderThickness="1,0,0,0"><TextBlock Text="{Binding Memory}" Margin="4,5" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" /></Border>
+                        </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </Border>
+            </DataTemplate>
+          </DataGrid.RowDetailsTemplate>
+          <DataGrid.ColumnHeaderStyle>
+            <Style TargetType="DataGridColumnHeader">
+              <Setter Property="Height" Value="36" />
+              <Setter Property="Background" Value="#FAFAFB" />
+              <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}" />
+              <Setter Property="BorderThickness" Value="0,0,0,1" />
+              <Setter Property="Padding" Value="8,0" />
+              <Setter Property="VerticalContentAlignment" Value="Center" />
+              <Setter Property="HorizontalContentAlignment" Value="Center" />
+              <Setter Property="FontWeight" Value="Normal" />
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="DataGridColumnHeader">
+                    <Border x:Name="HeaderBorder" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid>
+                          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                          <TextBlock x:Name="SortGlyph" Text="↑" FontSize="14" FontWeight="SemiBold"
+                                     Foreground="#956F00" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                     Visibility="Collapsed" RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform><RotateTransform Angle="0" /></TextBlock.RenderTransform>
+                          </TextBlock>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderBorder" Property="Background" Value="#F1F4F7" /></Trigger>
+                      <Trigger Property="SortDirection" Value="Ascending">
+                        <Setter TargetName="SortGlyph" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="HeaderBorder" Property="Background" Value="#FFF8DF" />
+                      </Trigger>
+                      <Trigger Property="SortDirection" Value="Descending">
+                        <Setter TargetName="SortGlyph" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="SortGlyph" Property="RenderTransform"><Setter.Value><RotateTransform Angle="180" /></Setter.Value></Setter>
+                        <Setter TargetName="HeaderBorder" Property="Background" Value="#FFF8DF" />
+                      </Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </DataGrid.ColumnHeaderStyle>
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="选择" Width="54" CanUserSort="False">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="22" Height="22" HorizontalAlignment="Center"
+                            VerticalAlignment="Center" Padding="2"
+                            ToolTip="选择此程序以启用上方操作" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="程序 / 进程" Width="1.15*" MinWidth="135" SortMemberPath="DisplayName">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,4">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                    <ToggleButton IsChecked="{Binding AreProcessesExpanded, Mode=TwoWay}"
+                                  Visibility="{Binding HasMultipleProcesses, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Width="20" Height="20" Padding="0" AutomationProperties.Name="展开进程实例"
+                                  Click="OnProcessToggleClick">
+                      <ToggleButton.Style>
+                        <Style TargetType="ToggleButton">
+                          <Setter Property="Content" Value="›" />
+                          <Setter Property="Background" Value="Transparent" />
+                          <Setter Property="BorderThickness" Value="0" />
+                          <Setter Property="FontSize" Value="16" />
+                          <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True"><Setter Property="Content" Value="⌄" /></Trigger>
+                          </Style.Triggers>
+                        </Style>
+                      </ToggleButton.Style>
+                    </ToggleButton>
+                    <TextBlock Grid.Column="1" Text="{Binding GroupDisplayName}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="实际使用 GPU" Width="1.35*" MinWidth="155" SortMemberPath="ActualGpuTable">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding ActualGpuTable}" TextWrapping="Wrap" VerticalAlignment="Center" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="GPU 专用显存" Width="130" SortMemberPath="TotalDedicatedBytes">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding MemorySummary}" TextAlignment="Center" VerticalAlignment="Center" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="当前偏好" Width="145" MinWidth="120" SortMemberPath="PreferenceSummary">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate><TextBlock Text="{Binding PreferenceSummary}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" /></DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                      Background="{StaticResource DividerBrush}" ShowsPreview="True" />
+
+        <Border Grid.Column="2" Background="#FAFBFC" BorderBrush="{StaticResource DividerBrush}"
+                BorderThickness="1,0,0,0">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                        Padding="18,14">
+            <StackPanel DataContext="{Binding DataContext.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
+              <TextBlock Text="应用详情" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
+              <TextBlock Text="{Binding DisplayName, TargetNullValue=请在表格中选择一个程序}" FontSize="16"
+                         FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="实际使用的 GPU" Style="{StaticResource SectionLabelStyle}" />
+              <TextBlock Text="{Binding ActualGpu, TargetNullValue=—}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AdapterUsageDetails}" Margin="0,5,0,0" TextWrapping="Wrap" />
+              <TextBlock Text="偏好作用目标" Style="{StaticResource SectionLabelStyle}" />
+              <ComboBox ItemsSource="{Binding PreferenceTargets}"
+                        SelectedItem="{Binding SelectedPreferenceTarget, Mode=TwoWay}"
+                        DisplayMemberPath="Label" MinHeight="34" Padding="7,4"
+                        ToolTip="多 EXE 应用只修改这里明确选择的可执行文件"
+                        AutomationProperties.Name="偏好作用目标" />
+              <TextBlock Text="{Binding EffectivePreferencePath}" Margin="0,4,0,0"
+                         FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"
+                         Foreground="{StaticResource SubtleTextBrush}" />
+              <TextBlock Text="当前偏好" Style="{StaticResource SectionLabelStyle}" />
+              <TextBlock Text="{Binding Preference, TargetNullValue=—}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding RawRule}" Margin="0,4,0,0" FontFamily="Consolas" TextWrapping="Wrap" />
+              <TextBlock Text="说明" Style="{StaticResource SectionLabelStyle}" />
+              <TextBlock Text="{Binding RowStatus, TargetNullValue=—}" TextWrapping="Wrap" />
+              <TextBlock Text="相关进程（按进程树归组）" Style="{StaticResource SectionLabelStyle}" />
+              <ItemsControl ItemsSource="{Binding Processes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="2,6">
+                      <StackPanel>
+                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Identity}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ActualGpu}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" />
+                        <TextBlock Text="{Binding Memory}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="采样详情" Style="{StaticResource SectionLabelStyle}" />
+              <TextBlock Text="{Binding Engine, StringFormat=最活跃引擎：{0}}" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding PeakDisplay, StringFormat=30 秒专用显存峰值：{0}}" Margin="0,4,0,0" />
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </DataTemplate>
+
+    <Style x:Key="HiddenTabItemStyle" TargetType="TabItem">
+      <Setter Property="Visibility" Value="Collapsed" />
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="224" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <Border Background="#EEF3F8" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,1,0">
+      <Grid>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="72" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="18,0" VerticalAlignment="Center">
+          <Border Width="30" Height="30" CornerRadius="6" Background="#C59A00">
+            <TextBlock Text="GPU" Foreground="White" FontSize="11" FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBlock Text="GPU 偏好管理器" Margin="10,0,0,0" FontSize="15"
+                     FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <ListBox x:Name="NavigationList" Grid.Row="1" SelectedIndex="0"
+                 ItemContainerStyle="{StaticResource NavItemStyle}"
+                 Background="Transparent" BorderThickness="0">
+          <ListBoxItem Content="待处理" />
+          <ListBoxItem Content="已指定" />
+          <ListBoxItem Content="全部占用" />
+          <ListBoxItem Content="忽略" />
+          <ListBoxItem Content="需留意" />
+          <ListBoxItem Content="历史与回滚" />
+          <ListBoxItem Content="显卡与系统" />
+          <ListBoxItem Content="设置" />
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Margin="16,12,16,16">
+          <ToggleButton Content="暂停采样" IsChecked="{Binding IsPaused}" Height="36" />
+          <TextBlock Text="{Binding Status}" Margin="2,10,2,0" FontSize="11"
+                     Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Column="1" Margin="20,14,20,18">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <Grid Margin="0,0,0,12">
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <TextBlock Text="GPU 应用偏好" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0"
+                    HorizontalAlignment="Right" VerticalAlignment="Center">
+          <TextBlock Text="筛选" Margin="0,0,7,0" VerticalAlignment="Center" Foreground="{StaticResource SubtleTextBrush}" />
+          <ComboBox Width="205" Height="38" Padding="8,4"
+                    SelectedIndex="{Binding UsageFilterIndex, Mode=TwoWay}"
+                    ToolTip="筛选当前列表中的 GPU 专用显存占用">
+            <ComboBoxItem Content="默认：总专用 &gt; 0" />
+            <ComboBoxItem Content="独显专用 &gt; 0" />
+            <ComboBoxItem Content="独显专用 ≥ 10 MiB" />
+            <ComboBoxItem Content="全部（含 0 占用）" />
+            <ComboBoxItem Content="自定义阈值…" />
+          </ComboBox>
+          <StackPanel Orientation="Horizontal" Margin="8,0,0,0"
+                      Visibility="{Binding IsCustomUsageFilter, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ComboBox Width="92" Height="38" SelectedIndex="{Binding CustomFilterTargetIndex, Mode=TwoWay}" ToolTip="自定义筛选统计范围">
+              <ComboBoxItem Content="总专用" />
+              <ComboBoxItem Content="独显专用" />
+            </ComboBox>
+            <TextBox Width="66" Height="38" Margin="6,0,0,0" Padding="8,6"
+                     Text="{Binding CustomFilterMinimumMiB, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"
+                     AutomationProperties.Name="自定义筛选最小 MiB" />
+            <TextBlock Text="MiB 以上" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource SubtleTextBrush}" />
+          </StackPanel>
+          <TextBlock Text="搜索" Margin="14,0,7,0" VerticalAlignment="Center" Foreground="{StaticResource SubtleTextBrush}" />
+          <TextBox Width="245" Height="38" Padding="12,6"
+                   Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                   ToolTip="按程序、子进程、可执行文件或 PID 筛选"
+                   AutomationProperties.Name="搜索程序、子进程或 PID" />
+        </StackPanel>
+      </Grid>
+
+      <Border Grid.Row="1" BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1"
+              Padding="0,0,0,10" Margin="0,0,0,12">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="{Binding SelectedCount, StringFormat=已选择 {0} 个}" VerticalAlignment="Center"
+                     Foreground="{StaticResource SubtleTextBrush}" Margin="0,0,14,0" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal">
+            <Button x:Name="PreferenceMenuButton" Content="设置偏好 ▾" Click="OnPreferenceMenuClick"
+                    IsEnabled="{Binding HasWritableSelection}"
+                    Style="{StaticResource CommandButtonStyle}" ToolTip="为所选程序设置或清除 Windows GPU 偏好">
+              <Button.ContextMenu>
+                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                  <MenuItem Header="指定核显" Command="{Binding ApplyIntegratedCommand}"
+                            ToolTip="需要身份唯一且可分配的节能 GPU" />
+                  <MenuItem Header="指定独显" Command="{Binding ApplyDiscreteCommand}"
+                            ToolTip="需要身份唯一且可分配的高性能 GPU" />
+                  <Separator />
+                  <MenuItem Header="通用节能" Command="{Binding ApplyPowerSavingCommand}" />
+                  <MenuItem Header="通用高性能" Command="{Binding ApplyHighPerformanceCommand}" />
+                  <Separator />
+                  <MenuItem Header="清除偏好（Windows 决定）" Command="{Binding ClearPreferenceCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+            </Button>
+            <Button Content="忽略" Command="{Binding IgnoreCommand}" Style="{StaticResource CommandButtonStyle}"
+                    ToolTip="仅在本工具中隐藏所选项目，不修改 Windows 偏好" />
+            <Button Content="取消忽略" Command="{Binding UnignoreCommand}" Style="{StaticResource CommandButtonStyle}"
+                    ToolTip="将所选项目移出忽略列表" />
+          </StackPanel>
+          <TextBlock Grid.Column="2" Text="修改后需重启程序" VerticalAlignment="Center" Margin="12,0,0,0"
+                     Foreground="{StaticResource SubtleTextBrush}" FontSize="12" />
+        </Grid>
+      </Border>
+
+      <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedIndex, ElementName=NavigationList}"
+                  ItemContainerStyle="{StaticResource HiddenTabItemStyle}"
+                  Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1">
+        <TabItem>
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel Margin="18,14,18,12">
+              <TextBlock Text="待处理" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="正在使用 GPU、尚未设置明确偏好且未被忽略的普通程序。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+            <ContentControl Grid.Row="1" Content="{Binding PendingRows}" ContentTemplate="{StaticResource ApplicationListTemplate}" />
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel Margin="18,14,18,12">
+              <TextBlock Text="已指定" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="已存在 Windows GPU 偏好规则的程序。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+            <ContentControl Grid.Row="1" Content="{Binding AssignedRows}" ContentTemplate="{StaticResource ApplicationListTemplate}" />
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel Margin="18,14,18,12">
+              <TextBlock Text="全部占用" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="按前台应用与后台进程分区；展开后逐项显示真实可执行文件、PID 和占用。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+            <ContentControl Grid.Row="1" Content="{Binding AllRows}" ContentTemplate="{StaticResource ApplicationListTemplate}" />
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel Margin="18,14,18,12">
+              <TextBlock Text="忽略" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="由本工具忽略的程序；忽略不会改动 Windows 注册表。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+            <ContentControl Grid.Row="1" Content="{Binding IgnoredRows}" ContentTemplate="{StaticResource ApplicationListTemplate}" />
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <Grid>
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel Margin="18,14,18,12">
+              <TextBlock Text="需留意" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="这里通常是系统/受保护进程（无法读取路径）或无法安全解释的规则，并不表示显卡故障。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+            <ContentControl Grid.Row="1" Content="{Binding ExceptionalRows}" ContentTemplate="{StaticResource ApplicationListTemplate}" />
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <Grid Margin="18,14">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock Text="历史与回滚" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="每次偏好变更都记录为事务，可按节点安全回滚。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,14,0,10">
+              <Button Content="刷新历史" Command="{Binding RefreshHistoryCommand}" Style="{StaticResource CommandButtonStyle}" />
+              <Button Content="撤销最新事务" Command="{Binding UndoLatestCommand}" Style="{StaticResource CommandButtonStyle}" />
+              <Button Content="回滚到所选节点" Command="{Binding RollbackToSelectedCommand}" Style="{StaticResource CommandButtonStyle}" />
+              <Button Content="恢复初始状态" Command="{Binding RestoreBaselineCommand}" Style="{StaticResource CommandButtonStyle}" />
+            </StackPanel>
+            <DataGrid Grid.Row="2" ItemsSource="{Binding History}" SelectedItem="{Binding SelectedHistory, Mode=TwoWay}"
+                      AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70" />
+                <DataGridTextColumn Header="时间" Binding="{Binding CreatedUtc}" Width="180" />
+                <DataGridTextColumn Header="操作" Binding="{Binding OperationType}" Width="160" />
+                <DataGridTextColumn Header="目标" Binding="{Binding TargetAdapterKey}" Width="240" />
+                <DataGridTextColumn Header="状态" Binding="{Binding Status}" Width="120" />
+                <DataGridTextColumn Header="说明" Binding="{Binding Note}" Width="*" MinWidth="220" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <Grid Margin="18,14">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock Text="显卡与系统" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="只显示可参与偏好分配的物理 GPU；虚拟、软件和远程适配器会自动排除。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
+              <TextBlock Text="{Binding ExcludedAdapterCount, StringFormat=已自动排除 {0} 个非物理适配器，它们不会再阻止核显分配。}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,3,0,0" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding AdapterCards}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,0,8,12" Padding="18,15" Background="White"
+                            BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="7">
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel>
+                          <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Type}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,3,0,0" />
+                          <TextBlock Text="{Binding Memory}" Margin="0,10,0,0" />
+                          <TextBlock Text="注册表设备键" Style="{StaticResource SectionLabelStyle}" />
+                          <TextBlock Text="{Binding SpecificAdapter}" FontFamily="Consolas" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Assignment}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                          <TextBlock Text="设备实例路径" Style="{StaticResource SectionLabelStyle}" />
+                          <TextBlock Text="{Binding DevicePath}" FontFamily="Consolas" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Border Grid.Column="1" Padding="10,5" CornerRadius="12" VerticalAlignment="Top" Margin="16,0,0,0"
+                                Background="#E8F3EA">
+                          <TextBlock Text="{Binding AssignmentBadge}" FontSize="12" />
+                        </Border>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </TabItem>
+        <TabItem>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="22,18" MaxWidth="680" HorizontalAlignment="Left">
+              <TextBlock Text="设置" FontSize="20" FontWeight="SemiBold" />
+              <TextBlock Text="当前版本的设置由本地 settings.json 管理。界面编辑将在后续里程碑提供。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,18" TextWrapping="Wrap" />
+              <Border Padding="18" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="7">
+                <StackPanel>
+                  <TextBlock Text="{Binding Settings.SamplingIntervalSeconds, StringFormat=采样间隔：{0} 秒}" Margin="0,4" />
+                  <TextBlock Text="{Binding Settings.Theme, StringFormat=主题：{0}}" Margin="0,4" />
+                  <TextBlock Text="数据目录：%LocalAppData%\GpuPreferenceManager" Margin="0,4" />
+                </StackPanel>
+              </Border>
+              <TextBlock Text="GPU 偏好是 Windows 调度提示，不是驱动级强制规则；应用可能忽略或自行选择适配器。" Margin="0,18,0,0" TextWrapping="Wrap" />
+              <Button Content="导出诊断 ZIP" Command="{Binding ExportDiagnosticsCommand}" Margin="0,18,0,0"
+                      HorizontalAlignment="Left" Style="{StaticResource CommandButtonStyle}" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+      </TabControl>
+    </Grid>
+  </Grid>
+</Window>

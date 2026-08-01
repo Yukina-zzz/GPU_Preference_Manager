@@ -1,0 +1,16 @@
+GPU Preference Manager 第三方组件声明
+====================================
+
+本项目直接依赖以下 NuGet 软件包。各组件版权归其各自作者所有，具体许可文本以对应软件包和上游仓库为准。
+
+- CommunityToolkit.Mvvm 8.4.2 — MIT
+- Microsoft.Data.Sqlite 10.0.10 — MIT
+- Microsoft.NET.ILLink.Tasks 10.0.10 — MIT
+- Microsoft.Windows.CsWin32 0.3.298 — MIT
+- Serilog 4.4.0 — Apache-2.0
+- Serilog.Sinks.File 7.0.0 — Apache-2.0
+- Vortice.DXGI 3.8.3 — MIT
+- WPF-UI 4.3.0（NuGet ID：WPF-UI；C# 命名空间：Wpf.Ui）— MIT
+- xUnit 2.9.3 及测试运行器 — Apache-2.0
+
+发布目录同时包含项目自身的 LICENSE。自包含发布还包括 Microsoft .NET Runtime；其许可文件由 dotnet publish 生成的运行时文件约束。

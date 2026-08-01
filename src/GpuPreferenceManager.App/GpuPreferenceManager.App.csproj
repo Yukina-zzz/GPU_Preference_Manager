@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <UseWPF>true</UseWPF>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>GpuPreferenceManager</AssemblyName>
+    <Version>0.8.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GpuPreferenceManager.Core\GpuPreferenceManager.Core.csproj" />
+    <ProjectReference Include="..\GpuPreferenceManager.Windows\GpuPreferenceManager.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" PrivateAssets="all" />
+    <PackageReference Include="WPF-UI" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\docs\DISTRIBUTION_README.txt" Link="README.txt" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
