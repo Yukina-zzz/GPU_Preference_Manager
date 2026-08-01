@@ -59,7 +59,7 @@ public sealed record RegistrySnapshot(
 }
 
 /// <summary>
-/// UserGpuPreferences 只读仓储契约。M0–M2 不提供写入接口。
+/// UserGpuPreferences 只读仓储契约；写入能力由 Windows 层的独立接口提供。
 /// </summary>
 public interface IUserGpuPreferencesReader
 {

@@ -5,7 +5,7 @@ using Serilog.Core;
 namespace GpuPreferenceManager.Windows.Diagnostics;
 
 /// <summary>
-/// M0 日志基础配置。
+/// 应用与命令行工具共用的日志基础配置。
 /// </summary>
 public static class DiagnosticLogging
 {

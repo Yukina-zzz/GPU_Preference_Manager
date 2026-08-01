@@ -66,12 +66,10 @@ dotnet test -c Release --no-build
 
 ## 项目文档
 
-- [开发主规格](docs/DEVELOPMENT_PLAN.md)
 - [实现状态](docs/IMPLEMENTATION_STATUS.md)
-- [手工验收报告](docs/MANUAL_TEST_REPORT.md)
 - [注册表格式](docs/REGISTRY_FORMAT.md)
 - [GPU 计数器说明](docs/GPU_COUNTERS.md)
-- [研究记录](docs/RESEARCH_NOTES.md)
+- [技术说明](docs/RESEARCH_NOTES.md)
 
 ## 当前版本
 
