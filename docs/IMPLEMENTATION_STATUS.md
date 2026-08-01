@@ -13,7 +13,7 @@
 - 支持通用节能、通用高性能、特定适配器及清除偏好；
 - 使用 SQLite 保存 baseline、事务历史和忽略列表，写入前导出 `.reg` 备份；
 - 支持读回校验、失败补偿、冲突检测、撤销、回滚到节点和恢复 baseline；
-- 提供 `GpuProbe registry/adapters/sample/inventory`、诊断 ZIP、Portable 和 SingleFile 发布。
+- 提供 `GpuProbe registry/adapters/sample/inventory`、诊断 ZIP、Portable 和 SingleFile 发布，并由 GitHub Actions 生成校验值和正式 Release。
 
 ## 安全边界
 

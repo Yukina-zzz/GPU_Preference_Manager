@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $project = [xml](Get-Content 'src/GpuPreferenceManager.App/GpuPreferenceManager.App.csproj')
+          $version = [string]$project.Project.PropertyGroup.Version
+          if ([string]::IsNullOrWhiteSpace($version)) { throw '项目版本号为空。' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+
+      - run: dotnet restore --locked-mode
+      - run: dotnet test -c Release --no-restore
+      - name: Publish packages
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Version '${{ steps.version.outputs.version }}'
+
+      - name: Generate checksums
+        shell: pwsh
+        run: |
+          $releaseRoot = Join-Path $PWD 'artifacts/release'
+          $files = @(
+            Get-Item (Join-Path $releaseRoot 'GpuPreferenceManager-${{ steps.version.outputs.version }}-win-x64-portable.zip')
+            Get-Item (Join-Path $releaseRoot 'GpuPreferenceManager-${{ steps.version.outputs.version }}-win-x64-single.exe')
+          )
+          $lines = $files | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          $checksumPath = Join-Path $releaseRoot 'SHA256SUMS.txt'
+          [System.IO.File]::WriteAllLines($checksumPath, $lines, [System.Text.UTF8Encoding]::new($false))
+          Get-Content $checksumPath
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create '${{ steps.version.outputs.tag }}' `
+            'artifacts/release/GpuPreferenceManager-${{ steps.version.outputs.version }}-win-x64-portable.zip' `
+            'artifacts/release/GpuPreferenceManager-${{ steps.version.outputs.version }}-win-x64-single.exe' `
+            'artifacts/release/SHA256SUMS.txt' `
+            --repo '${{ github.repository }}' `
+            --target '${{ github.sha }}' `
+            --title 'GPU Preference Manager ${{ steps.version.outputs.version }}' `
+            --notes-file 'docs/releases/v0.8.0.md' `
+            --latest

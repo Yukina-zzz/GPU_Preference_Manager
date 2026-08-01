@@ -60,6 +60,8 @@ dotnet test -c Release --no-build
 
 ## 发布
 
+最新正式版本可从 [GitHub Releases](https://github.com/Yukina-zzz/GPU_Preference_Manager/releases/latest) 下载。
+
 ```powershell
 .\scripts\publish.ps1
 ```
