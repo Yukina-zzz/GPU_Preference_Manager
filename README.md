@@ -1,6 +1,8 @@
 # GPU Preference Manager
 
-GPU Preference Manager 是面向 Windows 11 混合显卡环境的 WPF 桌面工具。它把 DXGI 适配器身份、PDH 实时 GPU 占用、Windows `UserGpuPreferences` 规则、批量修改、SQLite 历史与可恢复 `.reg` 备份放在同一界面中。
+这个项目最初是为“混合输出”场景做的：比如显示器分别接在核显和独显上时，可以集中查看每个程序实际在用哪张 GPU，并直接调整它的 GPU 偏好，不必每次都进入 Windows 设置，手动寻找 EXE、逐个添加再修改。
+
+GPU Preference Manager 是面向 Windows 11 混合显卡环境的 WPF 桌面工具。它把实时 GPU 占用、应用偏好、批量修改、历史记录和可恢复备份放在同一界面中。
 
 ## AI 创作声明
 
