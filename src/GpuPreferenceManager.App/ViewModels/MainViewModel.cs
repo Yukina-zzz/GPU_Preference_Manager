@@ -25,6 +25,9 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
     private readonly Dictionary<string, ApplicationRowViewModel> _rowMap = new(StringComparer.OrdinalIgnoreCase);
     private Task? _monitorTask;
     private AppSettings _settings;
+    private IReadOnlyList<ExecutableGpuUsage> _lastSnapshot = [];
+    private IReadOnlyList<ExecutableGpuUsage>? _deferredContextMenuSnapshot;
+    private bool _isRowContextMenuOpen;
 
     [ObservableProperty]
     private bool _isPaused;
@@ -102,6 +105,19 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         RollbackToSelectedCommand = new AsyncRelayCommand(RollbackToSelectedAsync);
         RestoreBaselineCommand = new AsyncRelayCommand(RestoreBaselineAsync);
         ExportDiagnosticsCommand = new AsyncRelayCommand(ExportDiagnosticsAsync);
+        ExcludeAdapterCommand = new AsyncRelayCommand<AdapterCardViewModel>(
+            ExcludeAdapterAsync,
+            static card => card?.CanExclude == true);
+        RestoreAdapterCommand = new AsyncRelayCommand<AdapterCardViewModel>(
+            RestoreAdapterAsync,
+            static card => card?.CanRestore == true);
+        ResetAdapterInclusionCommand = new AsyncRelayCommand<AdapterCardViewModel>(
+            ResetAdapterInclusionAsync,
+            static card => card?.IsForceIncluded == true);
+        ApplySinglePreferenceCommand = new AsyncRelayCommand<SinglePreferenceRequest>(
+            ApplySinglePreferenceAsync,
+            CanApplySinglePreference);
+        SetSingleIgnoredCommand = new AsyncRelayCommand<SingleIgnoreRequest>(SetSingleIgnoredAsync);
     }
 
     public ObservableCollection<ApplicationRowViewModel> Rows { get; } = [];
@@ -109,6 +125,8 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
     public ObservableCollection<GpuAdapterInfo> Adapters { get; } = [];
 
     public ObservableCollection<AdapterCardViewModel> AdapterCards { get; } = [];
+
+    public ObservableCollection<AdapterCardViewModel> ExcludedAdapterCards { get; } = [];
 
     public ObservableCollection<HistoryEntry> History { get; } = [];
 
@@ -146,12 +164,38 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
 
     public IAsyncRelayCommand ExportDiagnosticsCommand { get; }
 
+    public IAsyncRelayCommand<AdapterCardViewModel> ExcludeAdapterCommand { get; }
+
+    public IAsyncRelayCommand<AdapterCardViewModel> RestoreAdapterCommand { get; }
+
+    public IAsyncRelayCommand<AdapterCardViewModel> ResetAdapterInclusionCommand { get; }
+
+    public IAsyncRelayCommand<SinglePreferenceRequest> ApplySinglePreferenceCommand { get; }
+
+    public IAsyncRelayCommand<SingleIgnoreRequest> SetSingleIgnoredCommand { get; }
+
     public AppSettings Settings => _settings;
 
     public void Start()
     {
         _monitorTask ??= MonitorAsync(_shutdown.Token);
         _ = RefreshHistoryAsync();
+    }
+
+    /// <summary>
+    /// 右键菜单打开时冻结表格视图，采样仍在后台继续且只保留最新样本。
+    /// </summary>
+    public void SetRowContextMenuOpen(bool isOpen)
+    {
+        _isRowContextMenuOpen = isOpen;
+        if (isOpen || _deferredContextMenuSnapshot is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<ExecutableGpuUsage> latest = _deferredContextMenuSnapshot;
+        _deferredContextMenuSnapshot = null;
+        ApplySnapshot(latest);
     }
 
     public async ValueTask DisposeAsync()
@@ -275,7 +319,17 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
                     continue;
                 }
 
-                await Application.Current.Dispatcher.InvokeAsync(() => ApplySnapshot(snapshot));
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (_isRowContextMenuOpen)
+                    {
+                        _deferredContextMenuSnapshot = snapshot;
+                    }
+                    else
+                    {
+                        ApplySnapshot(snapshot);
+                    }
+                });
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -289,6 +343,7 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
 
     private void ApplySnapshot(IReadOnlyList<ExecutableGpuUsage> snapshot)
     {
+        _lastSnapshot = snapshot;
         HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
         foreach (ExecutableGpuUsage item in snapshot)
         {
@@ -330,25 +385,38 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             }
         }
 
-        Adapters.Clear();
-        AdapterCards.Clear();
-        ExcludedAdapterCount = 0;
-        foreach (GpuAdapterInfo adapter in _inventory.Adapters)
-        {
-            Adapters.Add(adapter);
-            if (adapter.Role == GpuAdapterRole.Excluded)
-            {
-                ExcludedAdapterCount++;
-            }
-            else
-            {
-                AdapterCards.Add(new AdapterCardViewModel(adapter));
-            }
-        }
+        RefreshAdapterCollections();
 
         UpdateSelectionState();
         Status = $"运行中 · {DateTimeOffset.Now:T} · {Rows.Count} 个程序";
         NotifyCommandStates();
+    }
+
+    private void RefreshAdapterCollections()
+    {
+        if (Adapters.SequenceEqual(_inventory.Adapters))
+        {
+            return;
+        }
+
+        Adapters.Clear();
+        AdapterCards.Clear();
+        ExcludedAdapterCards.Clear();
+        ExcludedAdapterCount = 0;
+        foreach (GpuAdapterInfo adapter in _inventory.Adapters)
+        {
+            Adapters.Add(adapter);
+            AdapterCardViewModel card = new(adapter, UpdateAdapterRoleAsync);
+            if (adapter.Role == GpuAdapterRole.Excluded)
+            {
+                ExcludedAdapterCount++;
+                ExcludedAdapterCards.Add(card);
+            }
+            else
+            {
+                AdapterCards.Add(card);
+            }
+        }
     }
 
     private bool MatchesUsageFilter(ApplicationRowViewModel row) => UsageFilterIndex switch
@@ -388,6 +456,57 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         await RefreshHistoryAsync();
     }
 
+    private async Task ApplySinglePreferenceAsync(SinglePreferenceRequest? request)
+    {
+        if (request is null || !CanApplySinglePreference(request))
+        {
+            Status = "该目标当前不能设置所选 GPU 偏好。";
+            return;
+        }
+
+        (GpuPreferenceTarget target, string? key) = request.Action switch
+        {
+            SinglePreferenceAction.SpecificPowerSaving => ResolveSpecificTarget(GpuAdapterRole.IntegratedOrPowerSaving),
+            SinglePreferenceAction.SpecificHighPerformance => ResolveSpecificTarget(GpuAdapterRole.DiscreteOrHighPerformance),
+            SinglePreferenceAction.GenericPowerSaving => (GpuPreferenceTarget.GenericPowerSaving, null),
+            SinglePreferenceAction.GenericHighPerformance => (GpuPreferenceTarget.GenericHighPerformance, null),
+            _ => (GpuPreferenceTarget.WindowsDecides, null),
+        };
+        ChangeResult result = await _changes.ApplyPreferenceAsync(
+            [request.ExecutablePath],
+            target,
+            key,
+            CancellationToken.None);
+        Status = result.Message;
+        await RefreshHistoryAsync();
+    }
+
+    private bool CanApplySinglePreference(SinglePreferenceRequest? request)
+    {
+        if (request is null
+            || string.IsNullOrWhiteSpace(request.ExecutablePath)
+            || request.ExecutablePath.StartsWith("<pid:", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return request.Action switch
+        {
+            SinglePreferenceAction.SpecificPowerSaving => HasUniqueSpecificTarget(GpuAdapterRole.IntegratedOrPowerSaving),
+            SinglePreferenceAction.SpecificHighPerformance => HasUniqueSpecificTarget(GpuAdapterRole.DiscreteOrHighPerformance),
+            _ => true,
+        };
+    }
+
+    private (GpuPreferenceTarget Target, string? Key) ResolveSpecificTarget(GpuAdapterRole role)
+    {
+        GpuAdapterInfo adapter = Adapters.Single(item => item.Role == role && item.IsAssignable);
+        return (GpuPreferenceTarget.SpecificAdapter, adapter.SpecificAdapterKey);
+    }
+
+    private bool HasUniqueSpecificTarget(GpuAdapterRole role) =>
+        Adapters.Count(item => item.Role == role && item.IsAssignable) == 1;
+
     private async Task SetIgnoredAsync(bool ignored)
     {
         foreach (ApplicationRowViewModel row in Rows.Where(static row => row.IsSelected).ToList())
@@ -399,17 +518,170 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         Status = ignored ? "已加入忽略列表。" : "已取消忽略。";
     }
 
+    private async Task SetSingleIgnoredAsync(SingleIgnoreRequest? request)
+    {
+        if (request is null)
+        {
+            return;
+        }
+
+        await _ignored.SetIgnoredAsync(request.Row.ExecutablePath, request.Ignored, CancellationToken.None);
+        Status = request.Ignored ? "已加入忽略列表。" : "已取消忽略。";
+    }
+
+    private async Task UpdateAdapterRoleAsync(AdapterCardViewModel card, AdapterOverrideRole role)
+    {
+        if (!card.CanCustomize)
+        {
+            throw new InvalidOperationException("该适配器缺少可持久化身份，不能自定义角色。");
+        }
+
+        List<GpuAdapterOverride> overrides = _settings.EffectiveAdapterOverrides.ToList();
+        if (role != AdapterOverrideRole.Automatic)
+        {
+            for (int index = overrides.Count - 1; index >= 0; index--)
+            {
+                if (overrides[index].Role == role
+                    && !GpuAdapterIdentity.Matches(overrides[index].AdapterIdentity, card.Source.AdapterIdentity))
+                {
+                    overrides[index] = overrides[index] with { Role = AdapterOverrideRole.Automatic };
+                }
+            }
+        }
+
+        UpsertAdapterOverride(overrides, card.Source.AdapterIdentity, current => current with { Role = role });
+        await SaveAdapterOverridesAsync(overrides, role == AdapterOverrideRole.Automatic
+            ? "已恢复自动角色判断。"
+            : $"已将 {card.Name} 手动指定为 {(role == AdapterOverrideRole.DiscreteOrHighPerformance ? "高性能 GPU" : "节能 GPU")}。");
+    }
+
+    private async Task ExcludeAdapterAsync(AdapterCardViewModel? card)
+    {
+        if (card is null)
+        {
+            return;
+        }
+
+        List<GpuAdapterOverride> overrides = _settings.EffectiveAdapterOverrides.ToList();
+        UpsertAdapterOverride(overrides, card.Source.AdapterIdentity, current => current with
+        {
+            Role = AdapterOverrideRole.Automatic,
+            ExclusionMode = AdapterExclusionMode.Excluded,
+        });
+        await SaveAdapterOverridesAsync(overrides, $"已手动排除 {card.Name}。");
+    }
+
+    private async Task RestoreAdapterAsync(AdapterCardViewModel? card)
+    {
+        if (card is null)
+        {
+            return;
+        }
+
+        bool requiresForce = card.Source.AutomaticExclusionReasons != AdapterAutomaticExclusionReason.None;
+        if (!card.IsManuallyExcluded && requiresForce)
+        {
+            MessageBoxResult answer = MessageBox.Show(
+                "该适配器被安全规则自动排除。强制恢复后，如果它与物理 GPU 的设备键重复，相关显卡都会暂时无法精确分配。\n\n仍要强制恢复吗？",
+                "强制恢复适配器",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
+        List<GpuAdapterOverride> overrides = _settings.EffectiveAdapterOverrides.ToList();
+        AdapterExclusionMode mode = requiresForce
+            ? AdapterExclusionMode.ForceIncluded
+            : AdapterExclusionMode.Automatic;
+        UpsertAdapterOverride(overrides, card.Source.AdapterIdentity, current => current with { ExclusionMode = mode });
+        await SaveAdapterOverridesAsync(overrides, requiresForce
+            ? $"已强制恢复 {card.Name}；设备键安全检查仍然有效。"
+            : $"已恢复 {card.Name}。");
+    }
+
+    private async Task ResetAdapterInclusionAsync(AdapterCardViewModel? card)
+    {
+        if (card is null)
+        {
+            return;
+        }
+
+        List<GpuAdapterOverride> overrides = _settings.EffectiveAdapterOverrides.ToList();
+        UpsertAdapterOverride(overrides, card.Source.AdapterIdentity, current => current with
+        {
+            Role = AdapterOverrideRole.Automatic,
+            ExclusionMode = AdapterExclusionMode.Automatic,
+        });
+        await SaveAdapterOverridesAsync(overrides, $"{card.Name} 已恢复自动排除规则。");
+    }
+
+    private async Task SaveAdapterOverridesAsync(List<GpuAdapterOverride> overrides, string successMessage)
+    {
+        overrides.RemoveAll(static item => item.Role == AdapterOverrideRole.Automatic
+            && item.ExclusionMode == AdapterExclusionMode.Automatic);
+        AppSettings previous = _settings;
+        AppSettings updated = _settings with { AdapterOverrides = overrides.ToArray() };
+        try
+        {
+            await _settingsService.SaveAsync(updated, CancellationToken.None);
+            _settings = updated;
+            _inventory.ApplyAdapterOverrides(updated.EffectiveAdapterOverrides);
+            ApplySnapshot(_lastSnapshot);
+            Status = successMessage;
+        }
+        catch (Exception exception)
+        {
+            _settings = previous;
+            _inventory.ApplyAdapterOverrides(previous.EffectiveAdapterOverrides);
+            ApplySnapshot(_lastSnapshot);
+            Status = $"保存显卡设置失败：{exception.Message}";
+            throw;
+        }
+    }
+
+    private static void UpsertAdapterOverride(
+        List<GpuAdapterOverride> overrides,
+        string identity,
+        Func<GpuAdapterOverride, GpuAdapterOverride> update)
+    {
+        int index = overrides.FindIndex(item => GpuAdapterIdentity.Matches(item.AdapterIdentity, identity));
+        GpuAdapterOverride current = index >= 0
+            ? overrides[index]
+            : new(identity);
+        GpuAdapterOverride updated = update(current) with { AdapterIdentity = identity };
+        if (index >= 0)
+        {
+            overrides[index] = updated;
+        }
+        else
+        {
+            overrides.Add(updated);
+        }
+    }
+
     private async Task RefreshHistoryAsync()
     {
         IReadOnlyList<HistoryEntry> entries = await _history.QueryAsync(CancellationToken.None);
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        void ApplyEntries()
         {
             History.Clear();
             foreach (HistoryEntry entry in entries)
             {
                 History.Add(entry);
             }
-        });
+        }
+
+        if (Application.Current?.Dispatcher is { } dispatcher)
+        {
+            await dispatcher.InvokeAsync(ApplyEntries);
+        }
+        else
+        {
+            ApplyEntries();
+        }
     }
 
     private async Task UndoLatestAsync()
@@ -484,6 +756,10 @@ public sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         ClearPreferenceCommand.NotifyCanExecuteChanged();
         IgnoreCommand.NotifyCanExecuteChanged();
         UnignoreCommand.NotifyCanExecuteChanged();
+        ExcludeAdapterCommand.NotifyCanExecuteChanged();
+        RestoreAdapterCommand.NotifyCanExecuteChanged();
+        ResetAdapterInclusionCommand.NotifyCanExecuteChanged();
+        ApplySinglePreferenceCommand.NotifyCanExecuteChanged();
     }
 
 }

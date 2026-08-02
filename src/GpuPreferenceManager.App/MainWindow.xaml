@@ -1,6 +1,7 @@
 <Window x:Class="GpuPreferenceManager.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viewModels="clr-namespace:GpuPreferenceManager.App.ViewModels"
         Title="GPU 偏好管理器"
         Width="1440" Height="840" MinWidth="1200" MinHeight="620"
         WindowStartupLocation="CenterScreen"
@@ -103,7 +104,7 @@
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" MinWidth="420" />
           <ColumnDefinition Width="5" />
-          <ColumnDefinition Width="300" />
+          <ColumnDefinition Width="360" MinWidth="320" MaxWidth="460" />
         </Grid.ColumnDefinitions>
 
         <DataGrid ItemsSource="{Binding}"
@@ -307,46 +308,102 @@
         <Border Grid.Column="2" Background="#FAFBFC" BorderBrush="{StaticResource DividerBrush}"
                 BorderThickness="1,0,0,0">
           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                        Padding="18,14">
+                        Padding="16,14">
             <StackPanel DataContext="{Binding DataContext.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type Window}}}">
-              <TextBlock Text="应用详情" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12" />
-              <TextBlock Text="{Binding DisplayName, TargetNullValue=请在表格中选择一个程序}" FontSize="16"
-                         FontWeight="SemiBold" TextWrapping="Wrap" />
-              <TextBlock Text="实际使用的 GPU" Style="{StaticResource SectionLabelStyle}" />
-              <TextBlock Text="{Binding ActualGpu, TargetNullValue=—}" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding AdapterUsageDetails}" Margin="0,5,0,0" TextWrapping="Wrap" />
-              <TextBlock Text="偏好作用目标" Style="{StaticResource SectionLabelStyle}" />
-              <ComboBox ItemsSource="{Binding PreferenceTargets}"
-                        SelectedItem="{Binding SelectedPreferenceTarget, Mode=TwoWay}"
-                        DisplayMemberPath="Label" MinHeight="34" Padding="7,4"
-                        ToolTip="多 EXE 应用只修改这里明确选择的可执行文件"
-                        AutomationProperties.Name="偏好作用目标" />
-              <TextBlock Text="{Binding EffectivePreferencePath}" Margin="0,4,0,0"
-                         FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"
-                         Foreground="{StaticResource SubtleTextBrush}" />
-              <TextBlock Text="当前偏好" Style="{StaticResource SectionLabelStyle}" />
-              <TextBlock Text="{Binding Preference, TargetNullValue=—}" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding RawRule}" Margin="0,4,0,0" FontFamily="Consolas" TextWrapping="Wrap" />
-              <TextBlock Text="说明" Style="{StaticResource SectionLabelStyle}" />
-              <TextBlock Text="{Binding RowStatus, TargetNullValue=—}" TextWrapping="Wrap" />
-              <TextBlock Text="相关进程（按进程树归组）" Style="{StaticResource SectionLabelStyle}" />
-              <ItemsControl ItemsSource="{Binding Processes}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,0,0,1" Padding="2,6">
-                      <StackPanel>
-                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Identity}" Margin="0,2,0,0" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding ActualGpu}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" />
-                        <TextBlock Text="{Binding Memory}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" />
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Text="采样详情" Style="{StaticResource SectionLabelStyle}" />
-              <TextBlock Text="{Binding Engine, StringFormat=最活跃引擎：{0}}" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding PeakDisplay, StringFormat=30 秒专用显存峰值：{0}}" Margin="0,4,0,0" />
+              <TextBlock Text="应用详情" FontSize="18" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding DisplayName, TargetNullValue=请在表格中选择一个程序}" FontSize="17"
+                         FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,7,0,12" />
+
+              <Border Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                      CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
+                  <TextBlock Text="实际使用的 GPU" FontWeight="SemiBold" Margin="0,0,0,7" />
+                  <TextBlock Text="{Binding ActualGpu, TargetNullValue=—}" Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding AdapterUsages.Count}" Value="0">
+                            <Setter Property="Visibility" Value="Visible" />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                  </TextBlock>
+                  <ItemsControl ItemsSource="{Binding AdapterUsages}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Background="#F4F7FA" BorderBrush="#E0E5EA" BorderThickness="1"
+                                CornerRadius="5" Padding="9,7" Margin="0,0,0,6">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <WrapPanel Margin="0,4,0,0">
+                              <TextBlock Text="{Binding DedicatedMemory}" Margin="0,0,10,0" />
+                              <TextBlock Text="{Binding SharedMemory}" Margin="0,0,10,0" />
+                              <TextBlock Text="{Binding Engine}" Foreground="{StaticResource SubtleTextBrush}" />
+                            </WrapPanel>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+
+              <Border Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                      CornerRadius="6" Padding="12" Margin="0,0,0,10">
+                <StackPanel>
+                  <TextBlock Text="偏好作用目标" FontWeight="SemiBold" Margin="0,0,0,7" />
+                  <ComboBox ItemsSource="{Binding PreferenceTargets}"
+                            SelectedItem="{Binding SelectedPreferenceTarget, Mode=TwoWay}"
+                            DisplayMemberPath="Label" MinHeight="34" Padding="7,4"
+                            ToolTip="多 EXE 应用只修改这里明确选择的可执行文件"
+                            AutomationProperties.Name="偏好作用目标" />
+                  <TextBlock Text="{Binding EffectivePreferencePath}" Margin="1,5,1,0"
+                             FontFamily="Consolas" FontSize="11" TextTrimming="CharacterEllipsis"
+                             Foreground="{StaticResource SubtleTextBrush}"
+                             ToolTip="{Binding EffectivePreferencePath}" />
+                  <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Margin="0,11,0,0" />
+                  <TextBlock Text="当前偏好" Style="{StaticResource SectionLabelStyle}" Margin="0,9,0,3" />
+                  <TextBlock Text="{Binding Preference, TargetNullValue=—}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <Expander Header="查看原始规则" Margin="0,8,0,0">
+                    <TextBox Text="{Binding RawRule}" Margin="0,5,0,0" Padding="7,5"
+                             FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"
+                             IsReadOnly="True" BorderBrush="{StaticResource DividerBrush}" />
+                  </Expander>
+                  <TextBlock Text="说明" Style="{StaticResource SectionLabelStyle}" Margin="0,9,0,3" />
+                  <TextBlock Text="{Binding RowStatus, TargetNullValue=—}" TextWrapping="Wrap"
+                             Foreground="{StaticResource SubtleTextBrush}" />
+                </StackPanel>
+              </Border>
+
+              <Expander Header="{Binding RelatedProcessesHeader}" Background="White"
+                        BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                        Padding="11,8" Margin="0,0,0,10">
+                <ItemsControl ItemsSource="{Binding Processes}" Margin="0,7,0,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Padding="1,7">
+                        <StackPanel>
+                          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding Identity}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ExecutablePath}" />
+                          <TextBlock Text="{Binding ActualGpu}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" />
+                          <TextBlock Text="{Binding Memory}" Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource SubtleTextBrush}" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Expander>
+
+              <Border Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1"
+                      CornerRadius="6" Padding="12">
+                <StackPanel>
+                  <TextBlock Text="采样详情" FontWeight="SemiBold" Margin="0,0,0,6" />
+                  <TextBlock Text="{Binding Engine, StringFormat=最活跃引擎：{0}}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding PeakDisplay, StringFormat=30 秒专用显存峰值：{0}}" Margin="0,4,0,0" />
+                </StackPanel>
+              </Border>
             </StackPanel>
           </ScrollViewer>
         </Border>
@@ -565,36 +622,84 @@
             <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
             <StackPanel>
               <TextBlock Text="显卡与系统" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="只显示可参与偏好分配的物理 GPU；虚拟、软件和远程适配器会自动排除。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" />
-              <TextBlock Text="{Binding ExcludedAdapterCount, StringFormat=已自动排除 {0} 个非物理适配器，它们不会再阻止核显分配。}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,3,0,0" />
+              <TextBlock Text="可以在本软件中修正高性能/节能角色，或排除不希望参与统计和分配的适配器；不会改写 Windows 全局 GPU 设置。"
+                         Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,0" TextWrapping="Wrap" />
             </StackPanel>
             <ScrollViewer Grid.Row="1" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-              <ItemsControl ItemsSource="{Binding AdapterCards}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate>
-                    <Border Margin="0,0,8,12" Padding="18,15" Background="White"
-                            BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="7">
-                      <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <StackPanel>
-                          <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding Type}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,3,0,0" />
-                          <TextBlock Text="{Binding Memory}" Margin="0,10,0,0" />
-                          <TextBlock Text="注册表设备键" Style="{StaticResource SectionLabelStyle}" />
-                          <TextBlock Text="{Binding SpecificAdapter}" FontFamily="Consolas" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding Assignment}" Margin="0,10,0,0" TextWrapping="Wrap" />
-                          <TextBlock Text="设备实例路径" Style="{StaticResource SectionLabelStyle}" />
-                          <TextBlock Text="{Binding DevicePath}" FontFamily="Consolas" TextWrapping="Wrap" />
-                        </StackPanel>
-                        <Border Grid.Column="1" Padding="10,5" CornerRadius="12" VerticalAlignment="Top" Margin="16,0,0,0"
-                                Background="#E8F3EA">
-                          <TextBlock Text="{Binding AssignmentBadge}" FontSize="12" />
-                        </Border>
-                      </Grid>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+              <StackPanel Margin="0,0,8,0">
+                <TextBlock Text="可用适配器" FontSize="15" FontWeight="SemiBold" Margin="2,0,0,8" />
+                <ItemsControl ItemsSource="{Binding AdapterCards}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="0,0,0,12" Padding="18,15" Background="White"
+                              BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="7">
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="250" /></Grid.ColumnDefinitions>
+                          <StackPanel>
+                            <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Type}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,3,0,0" />
+                            <TextBlock Text="{Binding RoleSource}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding Memory}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                            <TextBlock Text="注册表设备键" Style="{StaticResource SectionLabelStyle}" />
+                            <TextBlock Text="{Binding SpecificAdapter}" FontFamily="Consolas" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Assignment}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                            <TextBlock Text="设备实例路径" Style="{StaticResource SectionLabelStyle}" />
+                            <TextBlock Text="{Binding DevicePath}" FontFamily="Consolas" TextWrapping="Wrap" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="1" Margin="20,0,0,0">
+                            <Border Padding="10,5" CornerRadius="12" HorizontalAlignment="Right" Background="#E8F3EA">
+                              <TextBlock Text="{Binding AssignmentBadge}" FontSize="12" />
+                            </Border>
+                            <TextBlock Text="本软件中的角色" Style="{StaticResource SectionLabelStyle}" Margin="0,18,0,5" />
+                            <ComboBox ItemsSource="{x:Static viewModels:AdapterCardViewModel.RoleChoices}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding SelectedRole, Mode=TwoWay}"
+                                      IsEnabled="{Binding CanSetRole}" MinHeight="34" Padding="8,4"
+                                      ToolTip="只修改本软件的判断，不改写 Windows 全局高性能 GPU" />
+                            <Button Content="手动排除" Margin="0,12,0,0" MinHeight="34"
+                                    IsEnabled="{Binding CanExclude}"
+                                    Command="{Binding DataContext.ExcludeAdapterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}" />
+                            <Button Content="恢复自动排除规则" Margin="0,7,0,0" MinHeight="34"
+                                    Visibility="{Binding IsForceIncluded, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Command="{Binding DataContext.ResetAdapterInclusionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border BorderBrush="{StaticResource DividerBrush}" BorderThickness="0,1,0,0" Margin="0,6,0,12" />
+                <TextBlock Text="{Binding ExcludedAdapterCount, StringFormat=排除列表（{0}）}" FontSize="15" FontWeight="SemiBold" Margin="2,0,0,3" />
+                <TextBlock Text="自动排除项可以强制恢复，但无效或重复的设备键仍不能用于精确分配。"
+                           Foreground="{StaticResource SubtleTextBrush}" Margin="2,0,0,8" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding ExcludedAdapterCards}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Margin="0,0,0,12" Padding="18,15" Background="#FAFBFC"
+                              BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="7">
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <StackPanel>
+                            <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Type}" Foreground="{StaticResource SubtleTextBrush}" Margin="0,3,0,0" />
+                            <TextBlock Text="{Binding ExclusionReason}" Margin="0,10,0,0" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding SpecificAdapter}" Margin="0,7,0,0" FontFamily="Consolas" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding DevicePath}" Margin="0,4,0,0" FontFamily="Consolas" FontSize="11"
+                                       Foreground="{StaticResource SubtleTextBrush}" TextWrapping="Wrap" />
+                          </StackPanel>
+                          <Button Grid.Column="1" Content="{Binding RestoreText}" Margin="18,0,0,0" Padding="14,5"
+                                  VerticalAlignment="Top" IsEnabled="{Binding CanRestore}"
+                                  Command="{Binding DataContext.RestoreAdapterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  CommandParameter="{Binding}" />
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
             </ScrollViewer>
           </Grid>
         </TabItem>
@@ -602,7 +707,7 @@
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="22,18" MaxWidth="680" HorizontalAlignment="Left">
               <TextBlock Text="设置" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="当前版本的设置由本地 settings.json 管理。界面编辑将在后续里程碑提供。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,18" TextWrapping="Wrap" />
+              <TextBlock Text="基础设置和显卡自定义保存在本地 settings.json；显卡角色与排除规则请在“显卡与系统”中管理。" Foreground="{StaticResource SubtleTextBrush}" Margin="0,4,0,18" TextWrapping="Wrap" />
               <Border Padding="18" Background="White" BorderBrush="{StaticResource DividerBrush}" BorderThickness="1" CornerRadius="7">
                 <StackPanel>
                   <TextBlock Text="{Binding Settings.SamplingIntervalSeconds, StringFormat=采样间隔：{0} 秒}" Margin="0,4" />

@@ -293,6 +293,11 @@ public interface IApplicationInventoryService : IAsyncDisposable
 {
     IReadOnlyList<GpuAdapterInfo> Adapters { get; }
 
+    /// <summary>
+    /// 使用本次监控启动时已枚举的描述重新映射适配器；不得触发运行期重新枚举。
+    /// </summary>
+    void ApplyAdapterOverrides(IReadOnlyList<GpuAdapterOverride> adapterOverrides);
+
     IAsyncEnumerable<IReadOnlyList<ExecutableGpuUsage>> MonitorAsync(
         TimeSpan interval,
         CancellationToken cancellationToken);

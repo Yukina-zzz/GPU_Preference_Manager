@@ -3,7 +3,7 @@
     <UseWPF>true</UseWPF>
     <OutputType>WinExe</OutputType>
     <AssemblyName>GpuPreferenceManager</AssemblyName>
-    <Version>0.8.0</Version>
+    <Version>0.9.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\GpuPreferenceManager.Core\GpuPreferenceManager.Core.csproj" />

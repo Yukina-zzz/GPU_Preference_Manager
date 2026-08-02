@@ -49,8 +49,37 @@ public sealed class StorageAndDiagnosticsTests
 
             AppSettings settings = await new SettingsService(paths).LoadAsync(CancellationToken.None);
 
-            Assert.Equal(2, settings.SchemaVersion);
+            Assert.Equal(3, settings.SchemaVersion);
             Assert.Equal(1, settings.SamplingIntervalSeconds);
+            Assert.Empty(settings.EffectiveAdapterOverrides);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task AdapterOverridesRoundTripInSchemaVersionThree()
+    {
+        string root = CreateRoot();
+        try
+        {
+            ApplicationDataPaths paths = ApplicationDataPaths.Create(root);
+            SettingsService service = new(paths);
+            AppSettings expected = new(AdapterOverrides:
+            [
+                new(
+                    @"PATH:PCI\VEN_1002&DEV_73EF\FIXTURE",
+                    AdapterOverrideRole.DiscreteOrHighPerformance,
+                    AdapterExclusionMode.ForceIncluded),
+            ]);
+
+            await service.SaveAsync(expected, CancellationToken.None);
+            AppSettings actual = await service.LoadAsync(CancellationToken.None);
+
+            Assert.Equal(3, actual.SchemaVersion);
+            Assert.Equal(expected.EffectiveAdapterOverrides, actual.EffectiveAdapterOverrides);
         }
         finally
         {

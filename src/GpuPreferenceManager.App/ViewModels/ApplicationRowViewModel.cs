@@ -56,6 +56,9 @@ public sealed partial class ApplicationRowViewModel : ObservableObject
     private string _adapterUsageDetails = string.Empty;
 
     [ObservableProperty]
+    private IReadOnlyList<AdapterUsageDetailViewModel> _adapterUsages = [];
+
+    [ObservableProperty]
     private string _processDetails = string.Empty;
 
     [ObservableProperty]
@@ -110,6 +113,8 @@ public sealed partial class ApplicationRowViewModel : ObservableObject
 
     public string MemorySummary => BuildMemorySummary(DedicatedBytes, OtherDedicatedBytes);
 
+    public string RelatedProcessesHeader => $"相关进程（{ProcessCount}）";
+
     public void Update(ExecutableGpuUsage source, IReadOnlyList<GpuAdapterInfo> adapters)
     {
         _currentAdapters = adapters;
@@ -120,7 +125,11 @@ public sealed partial class ApplicationRowViewModel : ObservableObject
         DisplayName = source.DisplayName;
         ProcessCount = source.Processes.Count;
         Processes = BuildProcessRows(source, adapters, adapterById);
-        PreferenceTargets = BuildPreferenceTargets(source);
+        List<PreferenceTargetViewModel> nextPreferenceTargets = BuildPreferenceTargets(source);
+        if (!PreferenceTargetsEquivalent(PreferenceTargets, nextPreferenceTargets))
+        {
+            PreferenceTargets = nextPreferenceTargets;
+        }
         SelectedPreferenceTarget = PreferenceTargets.FirstOrDefault(target =>
                 string.Equals(target.ExecutablePath, selectedTargetPath, StringComparison.OrdinalIgnoreCase))
             ?? PreferenceTargets.FirstOrDefault(target =>
@@ -183,6 +192,11 @@ public sealed partial class ApplicationRowViewModel : ObservableObject
                 "\n\n",
                 active.Select(static item =>
                     $"{item.Name}\n专用 {FormatBytes(item.Usage.DedicatedBytes)}  ·  共享 {FormatBytes(item.Usage.SharedBytes)}  ·  {FormatEngine(item.Usage)}"));
+        AdapterUsages = active.Select(static item => new AdapterUsageDetailViewModel(
+            item.Name,
+            $"专用 {FormatBytes(item.Usage.DedicatedBytes)}",
+            $"共享 {FormatBytes(item.Usage.SharedBytes)}",
+            FormatEngine(item.Usage))).ToList();
         MissingSamples = 0;
         OnPropertyChanged(nameof(HasReadablePath));
         OnPropertyChanged(nameof(HasMultipleProcesses));
@@ -194,6 +208,7 @@ public sealed partial class ApplicationRowViewModel : ObservableObject
         OnPropertyChanged(nameof(TotalDedicatedBytes));
         OnPropertyChanged(nameof(MemorySummary));
         OnPropertyChanged(nameof(HasMultiplePreferenceTargets));
+        OnPropertyChanged(nameof(RelatedProcessesHeader));
     }
 
     partial void OnSelectedPreferenceTargetChanged(PreferenceTargetViewModel? value)
@@ -292,6 +307,16 @@ public sealed partial class ApplicationRowViewModel : ObservableObject
             .ToList();
     }
 
+    private static bool PreferenceTargetsEquivalent(
+        IReadOnlyList<PreferenceTargetViewModel> current,
+        List<PreferenceTargetViewModel> next) =>
+        current.Count == next.Count
+        && current.Zip(next).All(static pair =>
+            string.Equals(pair.First.ExecutablePath, pair.Second.ExecutablePath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(pair.First.DisplayName, pair.Second.DisplayName, StringComparison.Ordinal)
+            && string.Equals(pair.First.ProcessName, pair.Second.ProcessName, StringComparison.Ordinal)
+            && string.Equals(pair.First.Rule.RawValue, pair.Second.Rule.RawValue, StringComparison.Ordinal));
+
     private static string FormatPreference(GpuPreferenceRule rule, IReadOnlyList<GpuAdapterInfo> adapters) => rule.Kind switch
     {
         GpuPreferenceKind.NoRule or GpuPreferenceKind.WindowsDecides => "Windows 决定",
@@ -379,6 +404,12 @@ public sealed record ProcessRowViewModel(
 {
     public string Identity => $"{ProcessName}  ·  PID {ProcessId}  ·  启动于 {StartedAt}";
 }
+
+public sealed record AdapterUsageDetailViewModel(
+    string Name,
+    string DedicatedMemory,
+    string SharedMemory,
+    string Engine);
 
 public sealed record PreferenceTargetViewModel(
     string ExecutablePath,

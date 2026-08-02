@@ -67,6 +67,7 @@ public partial class App : Application, IDisposable
                 new WindowsProcessInfoProvider(),
                 registry,
                 ignored);
+            inventory.ApplyAdapterOverrides(settings.EffectiveAdapterOverrides);
             _changes = new(registry, history, backup, () => inventory.Adapters.Count > 0 ? inventory.Adapters : startupAdapters);
             _rollback = new(registry, history, backup);
             await _rollback.RecoverPendingTransactionsAsync(CancellationToken.None);

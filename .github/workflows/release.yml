@@ -28,8 +28,11 @@ jobs:
           $project = [xml](Get-Content 'src/GpuPreferenceManager.App/GpuPreferenceManager.App.csproj')
           $version = [string]$project.Project.PropertyGroup.Version
           if ([string]::IsNullOrWhiteSpace($version)) { throw '项目版本号为空。' }
+          $notes = "docs/releases/v$version.md"
+          if (-not (Test-Path $notes)) { throw "缺少发布说明：$notes" }
           "version=$version" >> $env:GITHUB_OUTPUT
           "tag=v$version" >> $env:GITHUB_OUTPUT
+          "notes=$notes" >> $env:GITHUB_OUTPUT
 
       - run: dotnet restore --locked-mode
       - run: dotnet test -c Release --no-restore
@@ -65,5 +68,5 @@ jobs:
             --repo '${{ github.repository }}' `
             --target '${{ github.sha }}' `
             --title 'GPU Preference Manager ${{ steps.version.outputs.version }}' `
-            --notes-file 'docs/releases/v0.8.0.md' `
+            --notes-file '${{ steps.version.outputs.notes }}' `
             --latest

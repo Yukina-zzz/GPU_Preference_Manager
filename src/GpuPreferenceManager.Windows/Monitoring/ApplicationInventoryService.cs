@@ -17,6 +17,8 @@ public sealed class ApplicationInventoryService : IApplicationInventoryService
     private readonly GpuLuidMapper _luidMapper = new();
     private readonly GpuUsagePeakTracker _peaks = new();
     private IReadOnlyList<GpuAdapterDescriptor> _descriptors = [];
+    private IReadOnlyList<GpuAdapterOverride> _adapterOverrides = [];
+    private RegistrySnapshot? _lastRegistrySnapshot;
 
     public ApplicationInventoryService(
         IGpuAdapterEnumerator adapterEnumerator,
@@ -31,6 +33,16 @@ public sealed class ApplicationInventoryService : IApplicationInventoryService
     }
 
     public IReadOnlyList<GpuAdapterInfo> Adapters { get; private set; } = [];
+
+    public void ApplyAdapterOverrides(IReadOnlyList<GpuAdapterOverride> adapterOverrides)
+    {
+        ArgumentNullException.ThrowIfNull(adapterOverrides);
+        _adapterOverrides = adapterOverrides.ToArray();
+        if (_descriptors.Count > 0 && _lastRegistrySnapshot is not null)
+        {
+            Adapters = GpuAdapterMappingService.Map(_descriptors, _lastRegistrySnapshot, _adapterOverrides);
+        }
+    }
 
     public async IAsyncEnumerable<IReadOnlyList<ExecutableGpuUsage>> MonitorAsync(
         TimeSpan interval,
@@ -83,7 +95,8 @@ public sealed class ApplicationInventoryService : IApplicationInventoryService
     {
         _descriptors = _adapterEnumerator.EnumerateAdapters();
         RegistrySnapshot registry = await _registry.ReadSnapshotAsync(cancellationToken);
-        Adapters = GpuAdapterMappingService.Map(_descriptors, registry);
+        _lastRegistrySnapshot = registry;
+        Adapters = GpuAdapterMappingService.Map(_descriptors, registry, _adapterOverrides);
     }
 
     private async Task<ProcessInfoSnapshot[]> ReadProcessesAsync(int[] pids, CancellationToken cancellationToken)

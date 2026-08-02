@@ -23,6 +23,51 @@ public enum GpuAdapterRole
 }
 
 /// <summary>
+/// 用户对适配器角色的本地覆盖。Automatic 表示继续采用自动判断。
+/// </summary>
+public enum AdapterOverrideRole
+{
+    Automatic,
+    IntegratedOrPowerSaving,
+    DiscreteOrHighPerformance,
+}
+
+/// <summary>
+/// 用户对适配器排除状态的本地覆盖。
+/// </summary>
+public enum AdapterExclusionMode
+{
+    Automatic,
+    Excluded,
+    ForceIncluded,
+}
+
+[Flags]
+public enum AdapterAutomaticExclusionReason
+{
+    None = 0,
+    Software = 1,
+    Remote = 2,
+    Virtual = 4,
+    MissingIdentity = 8,
+    NoUsableMemory = 16,
+}
+
+public enum AdapterRoleSource
+{
+    Automatic,
+    UserOverride,
+}
+
+/// <summary>
+/// 保存在本地设置中的适配器覆盖，不会修改 Windows 全局 GPU 设置。
+/// </summary>
+public sealed record GpuAdapterOverride(
+    string AdapterIdentity,
+    AdapterOverrideRole Role = AdapterOverrideRole.Automatic,
+    AdapterExclusionMode ExclusionMode = AdapterExclusionMode.Automatic);
+
+/// <summary>
 /// SpecificAdapter 身份的可信度。
 /// </summary>
 public enum AdapterIdentityConfidence
@@ -61,7 +106,12 @@ public sealed record GpuAdapterInfo(
     bool IsRemote,
     bool IsAssignable,
     string? DeviceInstancePath = null,
-    bool IsVirtual = false);
+    bool IsVirtual = false,
+    string AdapterIdentity = "",
+    bool CanCustomize = false,
+    AdapterAutomaticExclusionReason AutomaticExclusionReasons = AdapterAutomaticExclusionReason.None,
+    AdapterExclusionMode ExclusionMode = AdapterExclusionMode.Automatic,
+    AdapterRoleSource RoleSource = AdapterRoleSource.Automatic);
 
 /// <summary>
 /// DXGI 适配器枚举契约。

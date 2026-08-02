@@ -1,9 +1,11 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using GpuPreferenceManager.Core.Adapters;
 
 namespace GpuPreferenceManager.Windows.Storage;
 
 public sealed record AppSettings(
-    int SchemaVersion = 2,
+    int SchemaVersion = 3,
     int SamplingIntervalSeconds = 1,
     int PendingThresholdMiB = 16,
     string Theme = "System",
@@ -14,7 +16,12 @@ public sealed record AppSettings(
     double WindowWidth = 1440,
     double WindowHeight = 840,
     double? WindowLeft = null,
-    double? WindowTop = null);
+    double? WindowTop = null,
+    GpuAdapterOverride[]? AdapterOverrides = null)
+{
+    [JsonIgnore]
+    public IReadOnlyList<GpuAdapterOverride> EffectiveAdapterOverrides => AdapterOverrides ?? [];
+}
 
 public sealed class SettingsService
 {
@@ -32,14 +39,18 @@ public sealed class SettingsService
 
         await using FileStream stream = File.OpenRead(_paths.SettingsPath);
         AppSettings settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, Options, cancellationToken) ?? new();
-        return settings.SchemaVersion < 2
-            ? settings with
+        if (settings.SchemaVersion < 2)
+        {
+            settings = settings with
             {
-                SchemaVersion = 2,
                 SamplingIntervalSeconds = settings.SamplingIntervalSeconds == 2
                     ? 1
                     : settings.SamplingIntervalSeconds,
-            }
+            };
+        }
+
+        return settings.SchemaVersion < 3
+            ? settings with { SchemaVersion = 3, AdapterOverrides = [] }
             : settings;
     }
 
